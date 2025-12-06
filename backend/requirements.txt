@@ -1,0 +1,31 @@
+# FastAPI - Latest stable version
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.18
+pydantic==2.10.5
+python-dotenv==1.0.1
+
+# AI
+openai==1.3.0
+httpx==0.23.3
+httpcore==0.15.0
+
+# Database
+psycopg2-binary==2.9.10
+redis==5.2.1
+
+# Integrations
+requests==2.32.3
+jira==3.8.0
+notion-client==2.2.1
+slack-sdk==3.33.4
+
+# Audio (Optional - for future use)
+# SpeechRecognition==3.12.0
+# pydub==0.25.1
+
+# WebSocket
+websockets==14.1
+
+# Utilities
+python-dateutil==2.9.0
