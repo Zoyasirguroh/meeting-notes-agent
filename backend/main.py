@@ -340,46 +340,57 @@ async def send_notifications(request: NotificationRequest, background_tasks: Bac
     """ + "\n".join([f"• {risk}" for risk in request.analysis.risks])
     
     # Send email
-    try:
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        
-        smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-        smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-        smtp_user = os.environ.get("SMTP_USER")
-        smtp_password = os.environ.get("SMTP_PASSWORD")
-        
-        print(f"Email config - Server: {smtp_server}, Port: {smtp_port}, User: {smtp_user}")
-        
-        if smtp_user and smtp_password:
-            msg = MIMEMultipart()
-            msg['From'] = smtp_user
-            msg['To'] = request.email
-            msg['Subject'] = f"Meeting Summary - {datetime.now().strftime('%Y-%m-%d')}"
+    if request.email and request.email.strip():  # Only send email if email is provided
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
             
-            msg.attach(MIMEText(summary, 'plain'))
+            smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+            smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+            smtp_user = os.environ.get("SMTP_USER")
+            smtp_password = os.environ.get("SMTP_PASSWORD")
             
-            print(f"Attempting to send email to {request.email}...")
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            server.starttls()
-            print("TLS started, attempting login...")
-            server.login(smtp_user, smtp_password)
-            print("Login successful, sending message...")
-            server.send_message(msg)
-            server.quit()
-            print("Email sent successfully!")
-        else:
-            print("SMTP credentials not configured")
-    except Exception as e:
-        import traceback
-        print(f"Email sending failed: {e}")
-        print(f"Traceback: {traceback.format_exc()}")
+            print(f"Email config - Server: {smtp_server}, Port: {smtp_port}, User: {smtp_user}")
+            
+            if smtp_user and smtp_password:
+                msg = MIMEMultipart()
+                msg['From'] = smtp_user
+                msg['To'] = request.email
+                msg['Subject'] = f"Meeting Summary - {datetime.now().strftime('%Y-%m-%d')}"
+                
+                msg.attach(MIMEText(summary, 'plain'))
+                
+                print(f"Attempting to send email to {request.email}...")
+                server = smtplib.SMTP(smtp_server, smtp_port)
+                server.starttls()
+                print("TLS started, attempting login...")
+                server.login(smtp_user, smtp_password)
+                print("Login successful, sending message...")
+                server.send_message(msg)
+                server.quit()
+                print("Email sent successfully!")
+            else:
+                print("SMTP credentials not configured")
+        except Exception as e:
+            import traceback
+            print(f"Email sending failed: {e}")
+            print(f"Traceback: {traceback.format_exc()}")
     
     # Send Slack notification
-    if request.slack_webhook:
+    slack_webhook = request.slack_webhook
+    print(f"Slack webhook from request: {slack_webhook}")
+    
+    # If 'use_env' is passed, use the webhook from environment
+    if slack_webhook == 'use_env':
+        slack_webhook = os.environ.get("SLACK_WEBHOOK_URL")
+        print(f"Using Slack webhook from env: {slack_webhook[:50] if slack_webhook else 'NOT SET'}...")
+    
+    if slack_webhook:
         try:
             import requests
+            
+            print(f"Sending Slack notification to: {slack_webhook[:50]}...")
             
             slack_message = {
                 "text": f"📝 *Meeting Summary*\n\n{request.analysis.summary}",
@@ -402,9 +413,19 @@ async def send_notifications(request: NotificationRequest, background_tasks: Bac
                 ]
             }
             
-            requests.post(request.slack_webhook, json=slack_message)
+            response = requests.post(slack_webhook, json=slack_message)
+            print(f"Slack response status: {response.status_code}")
+            print(f"Slack response body: {response.text}")
+            if response.status_code == 200:
+                print("Slack message sent successfully!")
+            else:
+                print(f"Slack error: {response.text}")
         except Exception as e:
+            import traceback
             print(f"Slack notification failed: {e}")
+            print(f"Traceback: {traceback.format_exc()}")
+    else:
+        print("No Slack webhook configured or provided")
     
     return {
         "success": True,

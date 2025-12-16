@@ -190,14 +190,12 @@ export default function App() {
   const handleSendSlack = async () => {
     if (!analysis) return;
 
-    const webhook = prompt('Enter Slack webhook URL:');
-    if (!webhook) return;
-
     try {
       setLoading(true);
       await axios.post(`${API_URL}/api/notify`, {
         analysis,
-        slack_webhook: webhook
+        email: '',  // Required field, send empty string
+        slack_webhook: 'use_env'  // Backend will use SLACK_WEBHOOK_URL from .env
       });
       alert('Meeting minutes sent to Slack successfully!');
     } catch (err) {
